@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Lip Reader - Upload</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f4f4f4;
+    }
+    video {
+      width: 60%;
+      border: 2px solid #333;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .output {
+      margin-top: 20px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Lip Reader</h1>
+  <video id="video" autoplay muted></video><br>
+  <button onclick="startCamera()">Start Camera</button>
+  <button onclick="recordVideo()">🎥 Record & Predict</button>
+  <div class="output">Prediction: <span id="outputText">Waiting...</span></div>
+
+  <script>
+    let video = document.getElementById('video');
+    let outputText = document.getElementById('outputText');
+    let mediaRecorder, recordedBlobs = [], stream;
+
+    function startCamera() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+          stream = s;
+          video.srcObject = stream;
+        })
+        .catch(err => {
+          console.error("Error accessing camera:", err);
+          outputText.textContent = "Camera access failed.";
+        });
+    }
+
+    function recordVideo() {
+      if (!stream) {
+        outputText.textContent = "Please start the camera first.";
+        return;
+      }
+
+      recordedBlobs = [];
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedBlobs.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedBlobs, { type: 'video/webm' });
+        sendVideoToServer(blob);
+      };
+
+      mediaRecorder.start();
+      outputText.textContent = "🎬 Recording...";
+
+      setTimeout(() => {
+        mediaRecorder.stop();
+      }, 3000); // Record for 3 seconds
+    }
+
+    async function sendVideoToServer(blob) {
+      const formData = new FormData();
+      formData.append("video", blob, "webcam_video.mp4");
+
+      try {
+        const response = await fetch("https://xxxx.ngrok-free.app/predict", {
+           method: "POST",
+           body: formData,
+        });
+        const result = await response.json();
+        outputText.textContent = "Prediction: " + result.prediction;
+      } catch (err) {
+        console.error("Error uploading video:", err);
+        outputText.textContent = "Prediction failed. Try again.";
+      }
+    }
+  </script>
+</body>
+</html>
+
+
+
